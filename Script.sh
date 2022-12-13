@@ -1,22 +1,6 @@
 echo "Please enter user this is running from: "
 read localUser
 
-echo "Update system? (y/n): "
-read isSystemUpdated
-
-if [ $isSystemUpdated = "y" ] 
-then
-    apt-get update -y
-    apt-get upgrade -y
-    apt-get dist-upgrade -y
-    apt-get install -f -y
-    apt-get autoremove -y
-    apt-get autoclean -y
-    apt-get check
-    echo "Finished upgrading system, please restart OS."
-    exit
-fi
-
 echo "Create backups? (y/n): "
 read createBackups
 
@@ -32,6 +16,22 @@ then
     do
         cp -r /home/$x /Backups
     done
+fi
+
+echo "Update system? (y/n): "
+read isSystemUpdated
+
+if [ $isSystemUpdated = "y" ] 
+then
+    apt-get update -y
+    apt-get upgrade -y
+    apt-get dist-upgrade -y
+    apt-get install -f -y
+    apt-get autoremove -y
+    apt-get autoclean -y
+    apt-get check
+    echo "Finished upgrading system, please restart OS."
+    exit
 fi
 
 installDependencies() {
