@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Please enter user this is running from: "
 read localUser
 
@@ -49,6 +51,8 @@ installDependencies() {
     apt-get install rkhunter -y # Installs rkhunter (antivirus 4)
 }
 
+# [ ANTI VIRUSES ]
+
 runCLAMAV() {
     echo "Running Clam AV(Antivirus)"
     systemctl stop clamav-freshclam
@@ -94,4 +98,36 @@ runAllAVs() {
     runLynis
     runCHKRK
     runRKH
+    
+    if [ $1 -eq 1 ]
+    then
+        echo "Press any key to go back to the menu"
+        pause
+        # MENU FUNCTION
+    fi
+}
+
+# [ LOGIN MANAGING ]
+
+configureLoginSettings() {
+    currentLoginManager=$(cat /etc/X11/default-display-manager)
+    currentLoginManager="${currentLoginManager:10}"
+    echo "Your current login manager is $currentLoginManager"
+
+    if echo "$currentLoginManager" | grep -q "light" ; then
+        echo "Backing up lightdm config file"
+        mkdir /Backups
+        echo "Done, checking if lighdm file exists"
+        if [ -f "/etc/lightdm/lightdm.conf" ]
+        then
+            cp /etc/lightdm/lightdm.conf /Backups
+            echo "[SeatDefaults]" > "/etc/lightdm/lightdm.conf"
+            echo "allow-guest=false" >> "/etc/lightdm/lightdm.conf"
+        else
+            echo "\e[31mlightdm config file does not exist!\e[0m"
+        fi
+    fi
+
+    echo "Configuring login settings..."
+    
 }
