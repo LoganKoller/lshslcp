@@ -162,7 +162,7 @@ setAllPasswords() {
 
     coloredOutput "" "0"
 
-    ALL_USERS=$(cut -d: -f1 /etc/passwd)
+    ALL_USERS=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd)
 
     for USER in $ALL_USERS; do
         if [[ ! " ${EXCLUDE_USERS[@]} " =~ " ${USER} " ]]; then
@@ -183,7 +183,7 @@ addAdmin() {
 
     coloredOutput "\n" "0"
 
-    usermod -aG sudo NEW_ADMIN_USER
+    usermod -aG sudo $NEW_ADMIN_USER
 
     coloredOutput "Gave user $NEW_ADMIN_USER sudo permissions.\n" "0"
 }
@@ -194,9 +194,7 @@ removeAdmin() {
 
     coloredOutput "\n" "0"
 
-    gpasswd -d NEW_ADMIN_USER sudo
-
-    coloredOutput "Gave user $NEW_ADMIN_USER sudo permissions.\n" "0"
+    gpasswd -d $OLD_ADMIN_USER sudo
 }
 
 runList() {
@@ -212,27 +210,29 @@ runList() {
     coloredOutput "        ##\n" "34"
     coloredOutput "##################################\n" "34"
 
-    coloredOutput "1) Fix Sources          2) Setup Firewall\n" "0"
-    coloredOutput "3) Set All Passwords    4) List Admins\n" "0"
-    coloredOutput "5) Add Admin            6) Remove Admin\n" "0"
-    coloredOutput "7) Setup SSH            8) ---\n" "0"
+    coloredOutput "1) Backup               2) Fix Sources\n" "0"
+    coloredOutput "3) Setup Firewall       4) Set All Passwords\n" "0"
+    coloredOutput "5) List Admins          6) Add Admin\n" "0"
+    coloredOutput "7) Remove Admin         8) Configure SSH\n" "0"
     
     echo "Choose:"
     read -s USRINPOPTION
 
     if [ "${USRINPOPTION}" == "1" ]; then
-        fixSources
+	manageBackups
     elif [ "${USRINPOPTION}" == "2" ]; then
-        setupFirewall
+        fixSources
     elif [ "${USRINPOPTION}" == "3" ]; then
-        setAllPasswords
+        setupFirewall
     elif [ "${USRINPOPTION}" == "4" ]; then
-        listAdmins
+        setAllPasswords
     elif [ "${USRINPOPTION}" == "5" ]; then
-        addAdmin
+        listAdmins
     elif [ "${USRINPOPTION}" == "6" ]; then
-        removeAdmin
+        addAdmin
     elif [ "${USRINPOPTION}" == "7" ]; then
+        removeAdmin
+    elif [ "${USRINPOPTION}" == "8" ]; then
         configureSSH
     fi
 
