@@ -212,7 +212,31 @@ runList() {
     coloredOutput "        ##\n" "34"
     coloredOutput "##################################\n" "34"
 
+    coloredOutput "1) Fix Sources          2) Setup Firewall\n" "0"
+    coloredOutput "3) Set All Passwords    4) List Admins\n" "0"
+    coloredOutput "5) Add Admin            6) Remove Admin\n" "0"
+    coloredOutput "7) Setup SSH            8) ---\n" "0"
     
+    echo "Choose:"
+    read -s USRINPOPTION
+
+    if [ "${USRINPOPTION}" == "1" ]; then
+        fixSources
+    elif [ "${USRINPOPTION}" == "2" ]; then
+        setupFirewall
+    elif [ "${USRINPOPTION}" == "3" ]; then
+        setAllPasswords
+    elif [ "${USRINPOPTION}" == "4" ]; then
+        listAdmins
+    elif [ "${USRINPOPTION}" == "5" ]; then
+        addAdmin
+    elif [ "${USRINPOPTION}" == "6" ]; then
+        removeAdmin
+    elif [ "${USRINPOPTION}" == "7" ]; then
+        configureSSH
+    fi
+
+    runList
 }
 
 runList
