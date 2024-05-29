@@ -160,10 +160,21 @@ configureUpdates() {
         sudo apt-get install -y unattended-upgrades
         sudo dpkg-reconfigure --priority=low unattended-upgrades
         
-        sudo sed -i 's/^//APT::Periodic::Update-Package-Lists "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
-        sudo sed -i 's/^//APT::Periodic::Download-Upgradeable-Packages "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
-        sudo sed -i 's/^//APT::Periodic::AutocleanInterval "7";/g' /etc/apt/apt.conf.d/20auto-upgrades
-        sudo sed -i 's/^//APT::Periodic::Unattended-Upgrade "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
+        # Edit the configuration file for unattended upgrades
+        sudo bash -c 'cat > /etc/apt/apt.conf.d/20auto-upgrades << EOF
+        APT::Periodic::Update-Package-Lists "1";
+        APT::Periodic::Download-Upgradeable-Packages "1";
+        APT::Periodic::AutocleanInterval "7";
+        APT::Periodic::Unattended-Upgrade "1";
+        EOF'
+
+        # Ensure the update frequency is set to daily
+        sudo bash -c 'cat > /etc/apt/apt.conf.d/10periodic << EOF
+        APT::Periodic::Update-Package-Lists "1";
+        APT::Periodic::Download-Upgradeable-Packages "1";
+        APT::Periodic::AutocleanInterval "7";
+        APT::Periodic::Unattended-Upgrade "1";
+        EOF'
 
         sudo dpkg-reconfigure unattended-upgrades
     fi
