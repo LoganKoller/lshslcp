@@ -353,6 +353,7 @@ updateApplications() {
 }
 
 automatedList() {
+    manageBackups
     fixSources
     setupFirewall
     configureSSH
