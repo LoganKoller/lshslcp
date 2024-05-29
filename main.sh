@@ -139,9 +139,19 @@ configureSSH() {
 configureLoginSettings() {
     coloredOutput "Configuring Login Settings" "0"
 
-    sed -i 's/password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass sha512/password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5/g' /etc/pam.d/common-password
-    sed -i 's/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/g' /etc/ssh/sshd_config
+   echo "Content of /etc/pam.d/common-password before changes:"
+    cat /etc/pam.d/common-password
 
+    # Apply the first sed command
+    sudo sed -i 's/password[[:space:]]\+[success=1 default=ignore][[:space:]]\+pam_unix.so obscure use_authtok try_first_pass sha512/password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5/g' /etc/pam.d/common-password
+
+    # Apply the second sed command
+    sudo sed -i 's/password[[:space:]]\+requisite[[:space:]]\+pam_cracklib.so retry=3 minlen=8 difok=3/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/g' /etc/pam.d/common-password
+
+    # Print the content of the file after changes
+    echo "Content of /etc/pam.d/common-password after changes:"
+    cat /etc/pam.d/common-password
+    
     coloredOutput " [PASS]\n" "32"
 }
 
