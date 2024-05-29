@@ -143,7 +143,7 @@ configureLoginSettings() {
     cat /etc/pam.d/common-password
 
     # Apply the first sed command
-    sudo sed -i 's/password[[:space:]]\+[success=1 default=ignore][[:space:]]\+pam_unix.so obscure use_authtok try_first_pass sha512/password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5/g' /etc/pam.d/common-password
+    sudo sed -i 's/password[[:space:]]\+[success=1 default=ignore][[:space:]]\+pam_unix.so[[:space:]]\+obscure[[:space:]]\+use_authtok[[:space:]]\+try_first_pass[[:space:]]\+sha512/password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5/g' /etc/pam.d/common-password
 
     # Apply the second sed command
     sudo sed -i 's/password[[:space:]]\+requisite[[:space:]]\+pam_cracklib.so retry=3 minlen=8 difok=3/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/g' /etc/pam.d/common-password
