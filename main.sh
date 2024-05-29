@@ -70,6 +70,11 @@ manageBackups() { # Check if backups are made, if not make backups
     fi
 }
 
+configureNetwork() {
+    sysctl -w net.ipv4.tcp_syncookies=1
+    sysctl -w net.ipv4.ip_forward=0
+}
+
 fixSources() {
     coloredOutput "Fixing Sources...\n" "33"
 
@@ -95,7 +100,10 @@ fixSources() {
     coloredOutput " [PASS]\n" "32"
 
     coloredOutput "Replacing sources list..." "0"
-    cp $DSPATH /etc/apt/sources.list
+
+    cp $DSPATH "./tmp/sources.list"
+    sed -i "s/precise/$(lsb_release -c -s)/" "./tmp/sources.list"
+    cp "./tmp/sources.list" /etc/apt/sources.list
 
     if [ $? -eq 0 ]; then
         coloredOutput " [PASS]\n" "32"
@@ -344,6 +352,22 @@ removeAdmin() {
     gpasswd -d $OLD_ADMIN_USER sudo
 }
 
+configureUpdates() {
+    DISTRO=$(lsb_release -is)
+
+    if [[ " ${DISTRO} " == " Ubuntu " ]]; then
+        sudo apt-get install -y unattended-upgrades
+        sudo dpkg-reconfigure --priority=low unattended-upgrades
+        
+        sudo sed -i 's/^//APT::Periodic::Update-Package-Lists "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
+        sudo sed -i 's/^//APT::Periodic::Download-Upgradeable-Packages "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
+        sudo sed -i 's/^//APT::Periodic::AutocleanInterval "7";/g' /etc/apt/apt.conf.d/20auto-upgrades
+        sudo sed -i 's/^//APT::Periodic::Unattended-Upgrade "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
+
+        sudo dpkg-reconfigure unattended-upgrades
+    fi
+}
+
 updateApplications() {
     apt-get update
     apt-get upgrade
@@ -351,9 +375,10 @@ updateApplications() {
 
 automatedList() {
     fixSources
+    configureLoginSettings
+    configureNetwork
     setupFirewall
     configureSSH
-    configureLoginSettings
     updateApplications
 }
 
