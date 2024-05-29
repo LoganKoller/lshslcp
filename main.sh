@@ -82,19 +82,20 @@ fixSources() {
     coloredOutput " [$CODENAME]\n" "33"
     
     coloredOutput "Fetching $DISTRO's default sources list" "0"
-    if [ "$DISTRO" == "Ubuntu" ]; then
-        URL="http://archive.ubuntu.com/ubuntu/dists/$CODENAME/main/example/sources.list"
-    elif [ "DISTRO" == "Debian" ]; then
-        curl -o /tmp/sources.list.default $URL
-    else
-        coloredOutput " [FAIL]\n" "31"
-        coloredOutput "Unsupported distro : $DISTRO\n" "0"
-        return "Unsupported distro"
-    fi
+    DSPATH="./resources/$DISTRO/sources.default"
+    #if [ "$DISTRO" == "Ubuntu" ]; then
+    #    URL="http://archive.ubuntu.com/ubuntu/dists/$CODENAME/main/example/sources.list"
+    #elif [ "DISTRO" == "Debian" ]; then
+    #    curl -o /tmp/sources.list.default $URL
+    #else
+    #    coloredOutput " [FAIL]\n" "31"
+    #    coloredOutput "Unsupported distro : $DISTRO\n" "0"
+    #    return "Unsupported distro"
+    #fi
     coloredOutput " [PASS]\n" "32"
 
     coloredOutput "Replacing sources list..." "0"
-    cp /tmp/sources.list.default /etc/apt/sources.list
+    cp $DSPATH /etc/apt/sources.list
 
     if [ $? -eq 0 ]; then
         coloredOutput " [PASS]\n" "32"
@@ -268,7 +269,7 @@ removeUsrsGroup() {
     for USER in $ALL_USERS; do
         if [[ " ${INCLUDE_USERS[@]} " == " ${USER} " ]]; then
             sudo gpasswd -d $USER $REMOVE_USRR_GROUP_NAME
-            echo "Added $USER to $REMOVE_USRR_GROUP_NAME."
+            echo "Removed $USER from $REMOVE_USRR_GROUP_NAME."
         fi
     done
 }
@@ -343,8 +344,21 @@ removeAdmin() {
     gpasswd -d $OLD_ADMIN_USER sudo
 }
 
+updateApplications() {
+    apt-get update
+    apt-get upgrade
+}
+
+automatedList() {
+    fixSources
+    setupFirewall
+    configureSSH
+    configureLoginSettings
+    updateApplications
+}
+
 runList() {
-    coloredOutput "##################################\n" "38;5;20"
+    coloredOutput "##################################\n" "34"
     coloredOutput "##                              ##\n" "34"
     coloredOutput "##       " "34"
     coloredOutput "LSHS LINUX SCRIPT" "33"
@@ -365,7 +379,7 @@ runList() {
     coloredOutput "13) Add User to Group             14) Remove User from Group\n" "0"
     coloredOutput "15) Add Users to Group            16) Remove Users from Group\n" "0"
     coloredOutput "17) Display all Users in Group    18) Configure SSH\n" "0"
-    coloredOutput "19) Configure Login Settings      20) Configure SSH\n" "0"
+    coloredOutput "19) Configure Login Settings      20) Update Applications\n" "0"
     
     echo "Choose:"
     read -e USRINPOPTION
@@ -408,6 +422,10 @@ runList() {
         configureSSH
     elif [ "${USRINPOPTION}" == "19" ]; then
         configureLoginSettings
+    elif [ "${USRINPOPTION}" == "20" ]; then
+        updateApplications
+    elif [ "${USRINPOPTION}" == "99" ]; then
+        automatedList
     fi
 
     runList
