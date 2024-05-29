@@ -377,8 +377,8 @@ removeAdmin() {
 }
 
 updateApplications() {
-    apt-get update
-    apt-get -y upgrade
+    apt-get update -y
+    apt-get upgrade -y
 }
 
 setupFilePermissions() {
