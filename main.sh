@@ -136,9 +136,23 @@ configureSSH() {
     coloredOutput " [PASS]\n" "32"
 }
 
+configureLoginSettings() {
+    coloredOutput "Configuring Login Settings" "0"
+
+    sed -i 's/PermitRootLogin yes/PermitRootLogin no/g' /etc/ssh/sshd_config
+
+    coloredOutput " [PASS]\n" "32"
+}
+
 getExcludedUsers() {
     coloredOutput "Enter usernames to exclude(space-separated):" "0"
     read -r -a EXCLUDE_USERS
+    coloredOutput "\n" "0"
+}
+
+getIncludedUsers() {
+    coloredOutput "Enter usernames to include(space-separated):" "0"
+    read -r -a INCLUDE_USERS
     coloredOutput "\n" "0"
 }
 
@@ -170,6 +184,101 @@ setAllPasswords() {
             echo "Password for $USER has been changed."
         fi
     done
+}
+
+listUsers() {
+    coloredOutput "Users for this system:\n" "0"
+    awk -F: '$3 >= 1000 { print $1 }' /etc/passwd
+}
+
+addGroup() {
+    coloredOutput "New Group Name:" "0"
+    read -s NEW_GROUP
+
+    getIncludedUsers
+
+    sudo groupadd $NEW_GROUP
+
+    ALL_USERS=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd)
+
+    for USER in $ALL_USERS; do
+        if [[ " ${INCLUDE_USERS[@]} " == " ${USER} " ]]; then
+            sudo usermod -a -G $NEW_GROUP $USER
+            echo "Added $USER to $NEW_GROUP."
+        fi
+    done
+}
+
+removeGroup() {
+    coloredOutput "Group to remove:" "0"
+    read -s OLD_GROUP
+
+    coloredOutput "\n" "0"
+
+    sudo groupdel $OLD_GROUP
+}
+
+addUsrGroup() {
+    coloredOutput "Group:" "0"
+    read -s ADD_USR_GROUP_NAME
+    coloredOutput "\nUser:" "0"
+    read -s ADD_USR_USERNAME
+
+    sudo usermod -a -G $ADD_USR_GROUP_NAME $ADD_USR_USERNAME
+}
+
+removeUsrGroup() {
+    coloredOutput "Group:" "0"
+    read -s REMOVE_USR_GROUP_NAME
+    coloredOutput "\nUser:" "0"
+    read -s REMOVE_USR_USERNAME
+
+    sudo gpasswd -d $REMOVE_USR_USERNAME $REMOVE_USR_GROUP_NAME
+}
+
+listUsersInGroup() {
+    coloredOutput "Group to check:" "0"
+    read -s GROUP_TO_CHECK_USERS
+
+    coloredOutput "\n" "0"
+
+    GROUP_INFO_USRS=$(getent group "$GROUP_TO_CHECK_USERS")
+
+    # Check if the group exists
+    if [ -z "$GROUP_INFO_USRS" ]; then
+        echo "Group '$GROUP_TO_CHECK_USERS' does not exist."
+        exit 1
+    fi
+
+    users=$(echo "$GROUP_INFO_USRS" | awk -F: '{print $4}')
+
+    # Check if the group has any users
+    if [ -z "$users" ]; then
+        echo "Group '$GROUP_TO_CHECK_USERS' has no users."
+    else
+        echo "Users in group '$GROUP_TO_CHECK_USERS':"
+        echo "$users" | tr ',' '\n'
+    fi
+}
+
+addUser() {
+    coloredOutput "User to add:" "0"
+    read -s NEW_USER
+
+    coloredOutput "\n" "0"
+
+    sudo adduser $NEW_USER
+
+    coloredOutput "Added new user $NEW_ADMIN_USER.\n" "0"
+}
+
+removeUser() {
+    coloredOutput "User to remove:" "0"
+    read -s OLD_USER
+
+    coloredOutput "\n" "0"
+
+    sudo deluser $OLD_USER
 }
 
 listAdmins() {
@@ -210,10 +319,14 @@ runList() {
     coloredOutput "        ##\n" "34"
     coloredOutput "##################################\n" "34"
 
-    coloredOutput "1) Backup               2) Fix Sources\n" "0"
-    coloredOutput "3) Setup Firewall       4) Set All Passwords\n" "0"
-    coloredOutput "5) List Admins          6) Add Admin\n" "0"
-    coloredOutput "7) Remove Admin         8) Configure SSH\n" "0"
+    coloredOutput "1)  Backup                        2) Fix Sources\n" "0"
+    coloredOutput "3)  Setup Firewall                4) Set All Passwords\n" "0"
+    coloredOutput "5)  List Admins                   6) Add Admin\n" "0"
+    coloredOutput "7)  Remove Admin                  8) List All Users\n" "0"
+    coloredOutput "9)  Add User                      10) Remove User\n" "0"
+    coloredOutput "11) Add Group                     12) Remove Group\n" "0"
+    coloredOutput "13) Add User to Group             14) Remove User from Group\n" "0"
+    coloredOutput "15) Display all Users in Group    16) Configure SSH\n" "0"
     
     echo "Choose:"
     read -s USRINPOPTION
@@ -233,6 +346,22 @@ runList() {
     elif [ "${USRINPOPTION}" == "7" ]; then
         removeAdmin
     elif [ "${USRINPOPTION}" == "8" ]; then
+        listUsers
+    elif [ "${USRINPOPTION}" == "9" ]; then
+        addUser
+    elif [ "${USRINPOPTION}" == "10" ]; then
+        removeUser
+    elif [ "${USRINPOPTION}" == "11" ]; then
+        addGroup
+    elif [ "${USRINPOPTION}" == "12" ]; then
+        removeGroup
+    elif [ "${USRINPOPTION}" == "13" ]; then
+        addUsrGroup
+    elif [ "${USRINPOPTION}" == "14" ]; then
+        removeUsrGroup
+    elif [ "${USRINPOPTION}" == "15" ]; then
+        listUsersInGroup
+    elif [ "${USRINPOPTION}" == "16" ]; then
         configureSSH
     fi
 
