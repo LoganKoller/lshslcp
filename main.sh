@@ -153,6 +153,22 @@ configureLoginSettings() {
     coloredOutput " [PASS]\n" "32"
 }
 
+configureUpdates() {
+    DISTRO=$(lsb_release -is)
+
+    if [[ " ${DISTRO} " == " Ubuntu " ]]; then
+        sudo apt-get install -y unattended-upgrades
+        sudo dpkg-reconfigure --priority=low unattended-upgrades
+        
+        sudo sed -i 's/^//APT::Periodic::Update-Package-Lists "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
+        sudo sed -i 's/^//APT::Periodic::Download-Upgradeable-Packages "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
+        sudo sed -i 's/^//APT::Periodic::AutocleanInterval "7";/g' /etc/apt/apt.conf.d/20auto-upgrades
+        sudo sed -i 's/^//APT::Periodic::Unattended-Upgrade "1";/g' /etc/apt/apt.conf.d/20auto-upgrades
+
+        sudo dpkg-reconfigure unattended-upgrades
+    fi
+}
+
 getExcludedUsers() {
     coloredOutput "Enter usernames to exclude(space-separated):" "0"
     read -r -a EXCLUDE_USERS
@@ -358,6 +374,7 @@ automatedList() {
     setupFirewall
     configureSSH
     configureLoginSettings
+    configureUpdates
     updateApplications
 }
 
@@ -384,6 +401,7 @@ runList() {
     coloredOutput "15) Add Users to Group            16) Remove Users from Group\n" "0"
     coloredOutput "17) Display all Users in Group    18) Configure SSH\n" "0"
     coloredOutput "19) Configure Login Settings      20) Update Applications\n" "0"
+    coloredOutput "21) Configure Updates             00) Update Applications\n" "0"
     
     echo "Choose:"
     read -e USRINPOPTION
@@ -428,6 +446,8 @@ runList() {
         configureLoginSettings
     elif [ "${USRINPOPTION}" == "20" ]; then
         updateApplications
+    elif [ "${USRINPOPTION}" == "21" ]; then
+        configureUpdates
     elif [ "${USRINPOPTION}" == "99" ]; then
         automatedList
     fi
