@@ -406,16 +406,16 @@ automatedList() {
     read -e FTPR
 
     if [[ " ${TELNETR} " == " n " ]]; then
-        apt-get purge telnet
+        apt-get purge -y telnet
     fi
 
     if [[ " ${SSHR} " == " n " ]]; then
-        apt-get purge openssh-server
-        apt-get purge openssh-client
+        apt-get purge -y openssh-server
+        apt-get purge -y openssh-client
     fi
 
     if [[ " ${FTPR} " == " n " ]]; then
-        apt-get remove pure-ftpd
+        apt-get remove -y pure-ftpd
     fi
 
     updateApplications
