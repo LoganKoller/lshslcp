@@ -142,9 +142,9 @@ configureLoginSettings() {
     sudo sed -i 's/password\t\[success=1 default=ignore\]\tpam_unix\.so obscure use_authtok try_first_pass sha512/password\t[success=1 default=ignore]\tpam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5/g' /etc/pam.d/common-password
     sudo sed -i 's/password[[:space:]]\+requisite[[:space:]]\+pam_cracklib.so retry=3 minlen=8 difok=3/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/g' /etc/pam.d/common-password
     
-    sed -i 's/PASS_MAX_DAYS\t\99999/PASS_MAX_DAYS\t\90/g' /etc/login.defs
-    sed -i 's/PASS_MIN_DAYS\t\0/PASS_MIN_DAYS\t\7/g' /etc/login.defs
-    sed -i 's/PASS_WARN_AGE\t\5/PASS_WARN_AGE\t\14/g' /etc/login.defs
+    sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/g' /etc/login.defs
+    sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t7/g' /etc/login.defs
+    sed -i 's/PASS_WARN_AGE\t7/PASS_WARN_AGE\t14/g' /etc/login.defs
 
     coloredOutput " [PASS]\n" "32"
 }
@@ -232,6 +232,22 @@ addUsrGroup() {
     sudo usermod -a -G $ADD_USR_GROUP_NAME $ADD_USR_USERNAME
 }
 
+addUsrsGroup() {
+    coloredOutput "Group:" "0"
+    read -e ADD_USRR_GROUP_NAME
+
+    getIncludedUsers
+
+    ALL_USERS=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd)
+
+    for USER in $ALL_USERS; do
+        if [[ " ${INCLUDE_USERS[@]} " == " ${USER} " ]]; then
+            sudo usermod -a -G $ADD_USRR_GROUP_NAME $USER
+            echo "Added $USER to $ADD_USRR_GROUP_NAME."
+        fi
+    done
+}
+
 removeUsrGroup() {
     coloredOutput "Group:" "0"
     read -e REMOVE_USR_GROUP_NAME
@@ -239,6 +255,22 @@ removeUsrGroup() {
     read -e REMOVE_USR_USERNAME
 
     sudo gpasswd -d $REMOVE_USR_USERNAME $REMOVE_USR_GROUP_NAME
+}
+
+removeUsrsGroup() {
+    coloredOutput "Group:" "0"
+    read -e REMOVE_USRR_GROUP_NAME
+
+    getIncludedUsers
+
+    ALL_USERS=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd)
+
+    for USER in $ALL_USERS; do
+        if [[ " ${INCLUDE_USERS[@]} " == " ${USER} " ]]; then
+            sudo gpasswd -d $USER $REMOVE_USRR_GROUP_NAME
+            echo "Added $USER to $REMOVE_USRR_GROUP_NAME."
+        fi
+    done
 }
 
 listUsersInGroup() {
@@ -331,8 +363,9 @@ runList() {
     coloredOutput "9)  Add User                      10) Remove User\n" "0"
     coloredOutput "11) Add Group                     12) Remove Group\n" "0"
     coloredOutput "13) Add User to Group             14) Remove User from Group\n" "0"
-    coloredOutput "15) Display all Users in Group    16) Configure SSH\n" "0"
-    coloredOutput "17) Configure Login Settings      16) Configure SSH\n" "0"
+    coloredOutput "15) Add Users to Group            16) Remove Users from Group\n" "0"
+    coloredOutput "17) Display all Users in Group    18) Configure SSH\n" "0"
+    coloredOutput "19) Configure Login Settings      20) Configure SSH\n" "0"
     
     echo "Choose:"
     read -e USRINPOPTION
@@ -366,10 +399,14 @@ runList() {
     elif [ "${USRINPOPTION}" == "14" ]; then
         removeUsrGroup
     elif [ "${USRINPOPTION}" == "15" ]; then
-        listUsersInGroup
+        addUsrsGroup
     elif [ "${USRINPOPTION}" == "16" ]; then
-        configureSSH
+        removeUsrsGroup
     elif [ "${USRINPOPTION}" == "17" ]; then
+        listUsersInGroup
+    elif [ "${USRINPOPTION}" == "18" ]; then
+        configureSSH
+    elif [ "${USRINPOPTION}" == "19" ]; then
         configureLoginSettings
     fi
 
