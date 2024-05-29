@@ -139,7 +139,8 @@ configureSSH() {
 configureLoginSettings() {
     coloredOutput "Configuring Login Settings" "0"
 
-    sed -i 's/PermitRootLogin yes/PermitRootLogin no/g' /etc/ssh/sshd_config
+    sed -i 's/password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass sha512/password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5/g' /etc/pam.d/common-password
+    sed -i 's/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/g' /etc/ssh/sshd_config
 
     coloredOutput " [PASS]\n" "32"
 }
@@ -158,9 +159,9 @@ getIncludedUsers() {
 
 getNewPassword() {
     coloredOutput "Enter new password:" "0"
-    read -s NEW_PASSWORD
+    read -e NEW_PASSWORD
     coloredOutput "\nConfirm new password:" "0"
-    read -s CONFIRM_PASSWORD
+    read -e CONFIRM_PASSWORD
 
     coloredOutput "\n" "0"
 
@@ -193,7 +194,7 @@ listUsers() {
 
 addGroup() {
     coloredOutput "New Group Name:" "0"
-    read -s NEW_GROUP
+    read -e NEW_GROUP
 
     getIncludedUsers
 
@@ -211,7 +212,7 @@ addGroup() {
 
 removeGroup() {
     coloredOutput "Group to remove:" "0"
-    read -s OLD_GROUP
+    read -e OLD_GROUP
 
     coloredOutput "\n" "0"
 
@@ -220,25 +221,25 @@ removeGroup() {
 
 addUsrGroup() {
     coloredOutput "Group:" "0"
-    read -s ADD_USR_GROUP_NAME
+    read -e ADD_USR_GROUP_NAME
     coloredOutput "\nUser:" "0"
-    read -s ADD_USR_USERNAME
+    read -e ADD_USR_USERNAME
 
     sudo usermod -a -G $ADD_USR_GROUP_NAME $ADD_USR_USERNAME
 }
 
 removeUsrGroup() {
     coloredOutput "Group:" "0"
-    read -s REMOVE_USR_GROUP_NAME
+    read -e REMOVE_USR_GROUP_NAME
     coloredOutput "\nUser:" "0"
-    read -s REMOVE_USR_USERNAME
+    read -e REMOVE_USR_USERNAME
 
     sudo gpasswd -d $REMOVE_USR_USERNAME $REMOVE_USR_GROUP_NAME
 }
 
 listUsersInGroup() {
     coloredOutput "Group to check:" "0"
-    read -s GROUP_TO_CHECK_USERS
+    read -e GROUP_TO_CHECK_USERS
 
     coloredOutput "\n" "0"
 
@@ -263,7 +264,7 @@ listUsersInGroup() {
 
 addUser() {
     coloredOutput "User to add:" "0"
-    read -s NEW_USER
+    read -e NEW_USER
 
     coloredOutput "\n" "0"
 
@@ -274,7 +275,7 @@ addUser() {
 
 removeUser() {
     coloredOutput "User to remove:" "0"
-    read -s OLD_USER
+    read -e OLD_USER
 
     coloredOutput "\n" "0"
 
@@ -288,7 +289,7 @@ listAdmins() {
 
 addAdmin() {
     coloredOutput "User to give admin to:" "0"
-    read -s NEW_ADMIN_USER
+    read -e NEW_ADMIN_USER
 
     coloredOutput "\n" "0"
 
@@ -299,7 +300,7 @@ addAdmin() {
 
 removeAdmin() {
     coloredOutput "User to remove admin from:" "0"
-    read -s OLD_ADMIN_USER
+    read -e OLD_ADMIN_USER
 
     coloredOutput "\n" "0"
 
@@ -327,9 +328,10 @@ runList() {
     coloredOutput "11) Add Group                     12) Remove Group\n" "0"
     coloredOutput "13) Add User to Group             14) Remove User from Group\n" "0"
     coloredOutput "15) Display all Users in Group    16) Configure SSH\n" "0"
+    coloredOutput "17) Configure Login Settings      16) Configure SSH\n" "0"
     
     echo "Choose:"
-    read -s USRINPOPTION
+    read -e USRINPOPTION
 
     if [ "${USRINPOPTION}" == "1" ]; then
 	manageBackups
@@ -363,10 +365,11 @@ runList() {
         listUsersInGroup
     elif [ "${USRINPOPTION}" == "16" ]; then
         configureSSH
+    elif [ "${USRINPOPTION}" == "17" ]; then
+        configureLoginSettings
     fi
 
     runList
 }
 
 runList
-
