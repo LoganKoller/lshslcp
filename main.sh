@@ -102,6 +102,8 @@ fixSources() {
 
     if [ $? -eq 0 ]; then
         coloredOutput " [PASS]\n" "32"
+
+        apt-get update
     else
         coloredOutput " [FAIL]\n" "31"
     fi
@@ -141,6 +143,8 @@ configureSSH() {
 }
 
 configureLoginSettings() {
+    apt-get install libpam-cracklib
+
     coloredOutput "Configuring Login Settings" "0"
 
     sudo sed -i 's/password\t\[success=1 default=ignore\]\tpam_unix\.so obscure use_authtok try_first_pass sha512/password\t[success=1 default=ignore]\tpam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5/g' /etc/pam.d/common-password
@@ -162,19 +166,17 @@ configureUpdates() {
         
         # Edit the configuration file for unattended upgrades
         sudo bash -c 'cat > /etc/apt/apt.conf.d/20auto-upgrades << EOF
-        APT::Periodic::Update-Package-Lists "1";
-        APT::Periodic::Download-Upgradeable-Packages "1";
-        APT::Periodic::AutocleanInterval "7";
-        APT::Periodic::Unattended-Upgrade "1";
-        EOF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
+APT::Periodic::Unattended-Upgrade "1";'
 
         # Ensure the update frequency is set to daily
         sudo bash -c 'cat > /etc/apt/apt.conf.d/10periodic << EOF
-        APT::Periodic::Update-Package-Lists "1";
-        APT::Periodic::Download-Upgradeable-Packages "1";
-        APT::Periodic::AutocleanInterval "7";
-        APT::Periodic::Unattended-Upgrade "1";
-        EOF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
+APT::Periodic::Unattended-Upgrade "1";'
 
         sudo dpkg-reconfigure unattended-upgrades
     fi
@@ -376,16 +378,46 @@ removeAdmin() {
 
 updateApplications() {
     apt-get update
-    apt-get upgrade
+    apt-get -y upgrade
+}
+
+setupFilePermissions() {
+    chmod -R 444 /var/log
+    chmod 440 /etc/passwd
+    chmod 440 /etc/shadow
+    chmod 440 /etc/group
+    chmod -R 444 /etc/ssh
 }
 
 automatedList() {
     manageBackups
     fixSources
     setupFirewall
+    setupFilePermissions
     configureSSH
     configureLoginSettings
     configureUpdates
+
+    echo "Is Telnet required? (y/n):"
+    read -e TELNETR
+    echo "Is SSH required? (y/n):"
+    read -e SSHR
+    echo "Is FTP required? (y/n):"
+    read -e FTPR
+
+    if [[ " ${TELNETR} " == " n " ]]; then
+        apt-get purge telnet
+    fi
+
+    if [[ " ${SSHR} " == " n " ]]; then
+        apt-get purge openssh-server
+        apt-get purge openssh-client
+    fi
+
+    if [[ " ${FTPR} " == " n " ]]; then
+        apt-get remove pure-ftpd
+    fi
+
     updateApplications
 }
 
