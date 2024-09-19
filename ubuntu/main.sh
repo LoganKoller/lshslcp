@@ -147,8 +147,8 @@ configureLoginSettings() {
 
     coloredOutput "Configuring Login Settings" "0"
 
-    sudo sed -i 's/password\t\[success=1 default=ignore\]\tpam_unix\.so obscure use_authtok try_first_pass sha512/password\t[success=1 default=ignore]\tpam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5/g' /etc/pam.d/common-password
-    sudo sed -i 's/password[[:space:]]\+requisite[[:space:]]\+pam_cracklib.so retry=3 minlen=8 difok=3/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/g' /etc/pam.d/common-password
+    sudo sed -i 's/password\t\[success=1 default=ignore\]\tpam_unix\.so/password\t[success=1 default=ignore]\tpam_unix.so minlen=8 remember=5/g' /etc/pam.d/common-password
+    #sudo sed -i 's/password[[:space:]]\+requisite[[:space:]]\+pam_cracklib.so retry=3 minlen=8 difok=3/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/g' /etc/pam.d/common-password
     
     sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/g' /etc/login.defs
     sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t7/g' /etc/login.defs
