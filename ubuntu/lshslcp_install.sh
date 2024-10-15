@@ -6,4 +6,4 @@ sudo mv "$ofn" "$tempdir/lshslcp"
 sudo mv "$tempdir/lshslcp" "./"
 sudo rm -rf "$tempdir"
 sudo apt-get install dos2unix
-sudo dos2unix lshslcp/main.sh
+sudo dos2unix ./lshslcp/main.sh
