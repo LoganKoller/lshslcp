@@ -4,7 +4,8 @@ SCRIPT_PATH=$(readlink -f "$0")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 
 # TODO
-#   
+#   List all running services: systemctl list-units --type=service --state=active
+#   List all used ports
 
 # Color Codes:
 #   Reset: 0
@@ -35,6 +36,26 @@ backupFile() { # (args: [dir: string])
     else
         coloredOutput "[FAIL]\n" "31"
     fi
+}
+
+removeCommonHackingSoftware() {
+    apt-get purge -y wireshark-*
+    apt-get purge -y ophcrack*
+    apt-get purge -y ettercap*
+    apt-get purge -y deluge*
+    apt-get purge -y aisleriot*
+    apt-get purge -y john*
+    apt-get purge -y *nmap*
+    apt-get purge -y netcat*
+    apt-get purge -y hydra*
+}
+
+listRunningServices() {
+    systemctl list-units --type=service --state=active
+}
+
+listUsedPorts() {
+    sudo lsof -i -P -n | grep LISTEN
 }
 
 manageBackups() { # Check if backups are made, if not make backups
@@ -411,6 +432,10 @@ manageRequiredSoftware() {
     read -e SSHR
     echo "Is FTP required? (y/n):"
     read -e FTPR
+    echo "Is NGINX required? (y/n):"
+    read -e NGINXR
+    echo "Is Bind9 required? (y/n):"
+    read -e B9R
     echo "Is Dovecot(mailing server) required? (y/n):"
     read -e DCR
     echo "Is Courier-pop(mailing server) required? (y/n):"
@@ -439,6 +464,15 @@ manageRequiredSoftware() {
         apt-get purge -y courier-pop
     fi
 
+    if [[ " ${NGINXR} " == " n " ]]; then
+        systemctl stop nginx
+        systemctl disable nginx
+    fi
+
+    if [[ " ${B9R} " == " n " ]]; then
+        service bind9 stop
+    fi
+
     apt-get autoclean -y
 }
 
@@ -456,6 +490,7 @@ automatedList() {
     configureUpdates
     exec > >(tee -a /var/log/lshs_auto.log) 2>&1
 
+    removeCommonHackingSoftware
     manageRequiredSoftware
 
     updateApplications
@@ -490,7 +525,8 @@ runList() {
     coloredOutput "19) Configure Login Settings      20) Update Applications\n" "0"
     coloredOutput "21) Configure Updates             22) Manage required software\n" "0"
     coloredOutput "23) List all media files in home  24) List all unowned files\n" "0"
-    coloredOutput "25) Remove all files/directory in 26) ---\n" "0"
+    coloredOutput "25) Remove all files/directory in 26) Remove Common Hacking apps\n" "0"
+    coloredOutput "27) List all running services     28) List all used ports\n" "0"
     
     coloredOutput "auto" "33" 
     coloredOutput ") " "0" 
@@ -549,6 +585,12 @@ runList() {
         listAllUnownedFiles
     elif [ "${USRINPOPTION}" == "25" ]; then
         removeFilesDir
+    elif [ "${USRINPOPTION}" == "26" ]; then
+        removeCommonHackingSoftware
+    elif [ "${USRINPOPTION}" == "27" ]; then
+        listRunningServices
+    elif [ "${USRINPOPTION}" == "28" ]; then
+        listUsedPorts
     elif [ "${USRINPOPTION}" == "auto" ]; then
         automatedList
     fi
