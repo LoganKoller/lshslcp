@@ -458,6 +458,8 @@ automatedList() {
     updateApplications
     
     exec > /dev/tty 2>&1
+
+    coloredOutput "\nSaved log under /var/log/lshs_auto.log\n" "32"
 }
 
 runList() {
