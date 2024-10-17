@@ -3,6 +3,9 @@
 SCRIPT_PATH=$(readlink -f "$0")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 
+# TODO
+#   
+
 # Color Codes:
 #   Reset: 0
 #   Black: 30
@@ -11,7 +14,7 @@ SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 #   Yellow: 33
 #   Blue: 34
 #   Magenta: 35
-#   Cyan: 36    
+#   Cyan: 36
 #   White: 37
 coloredOutput() { # (args: [output: string, colorCode: string])
     output=$1
@@ -103,7 +106,7 @@ fixSources() {
     if [ $? -eq 0 ]; then
         coloredOutput " [PASS]\n" "32"
 
-        apt-get update
+        apt-get update -y
     else
         coloredOutput " [FAIL]\n" "31"
     fi
@@ -112,7 +115,7 @@ fixSources() {
 setupFirewall() {
     coloredOutput "Installing UFW" "0"
     #coloredOutput " [FAIL]\n" "31" # Check later on how to see if its succesfully installed
-    apt-get install ufw
+    apt-get install -y ufw
 
     coloredOutput " [PASS]\n" "32"
 
@@ -130,7 +133,7 @@ setupFirewall() {
 configureSSH() {
     coloredOutput "Installing SSH" "0"
     #coloredOutput " [FAIL]\n" "31" # Check later on how to see if its succesfully installed
-    apt-get install openssh-server
+    apt-get install -y openssh-server
     systemctl start sshd
 
     coloredOutput " [PASS]\n" "32"
@@ -143,11 +146,10 @@ configureSSH() {
 }
 
 configureLoginSettings() {
-    apt-get install libpam-cracklib
-
     coloredOutput "Configuring Login Settings" "0"
 
-    sudo sed -i 's/password\t\[success=1 default=ignore\]\tpam_unix\.so/password\t[success=1 default=ignore]\tpam_unix.so minlen=8 remember=5/g' /etc/pam.d/common-password
+    sudo sed -i 's/pam_unix\.so/pam_unix.so minlen=8 remember=5/g' /etc/pam.d/common-password
+    sudo sed -i 's/nullok//g' /etc/pam.d/common-auth
     #sudo sed -i 's/password[[:space:]]\+requisite[[:space:]]\+pam_cracklib.so retry=3 minlen=8 difok=3/password        requisite                       pam_cracklib.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/g' /etc/pam.d/common-password
     
     sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/g' /etc/login.defs
@@ -184,13 +186,15 @@ APT::Periodic::Unattended-Upgrade "1";'
 
 getExcludedUsers() {
     coloredOutput "Enter usernames to exclude(space-separated):" "0"
-    read -r -a EXCLUDE_USERS
+    read -p " " EXCLUDE_USERS_INPUT
+    IFS=' ' read -r -a EXCLUDE_USERS <<< "$EXCLUDE_USERS_INPUT"
     coloredOutput "\n" "0"
 }
 
 getIncludedUsers() {
     coloredOutput "Enter usernames to include(space-separated):" "0"
-    read -r -a INCLUDE_USERS
+    read -p " " INCLUDE_USERS_INPUT
+    IFS=' ' read -r -a INCLUDE_USERS <<< "$INCLUDE_USERS_INPUT"
     coloredOutput "\n" "0"
 }
 
@@ -226,7 +230,7 @@ setAllPasswords() {
 
 listUsers() {
     coloredOutput "Users for this system:\n" "0"
-    awk -F: '$3 >= 1000 { print $1 }' /etc/passwd
+    awk -F: '$3 >= 1000 && $1 != "nobody" { print $1 }' /etc/passwd
 }
 
 addGroup() {
@@ -237,13 +241,9 @@ addGroup() {
 
     sudo groupadd $NEW_GROUP
 
-    ALL_USERS=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd)
-
-    for USER in $ALL_USERS; do
-        if [[ " ${INCLUDE_USERS[@]} " == " ${USER} " ]]; then
-            sudo usermod -a -G $NEW_GROUP $USER
-            echo "Added $USER to $NEW_GROUP."
-        fi
+    for USER in "${INCLUDE_USERS[@]}"; do
+        sudo usermod -a -G $NEW_GROUP $USER
+        echo "Added $USER to $NEW_GROUP."
     done
 }
 
@@ -271,13 +271,9 @@ addUsrsGroup() {
 
     getIncludedUsers
 
-    ALL_USERS=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd)
-
-    for USER in $ALL_USERS; do
-        if [[ " ${INCLUDE_USERS[@]} " == " ${USER} " ]]; then
-            sudo usermod -a -G $ADD_USRR_GROUP_NAME $USER
-            echo "Added $USER to $ADD_USRR_GROUP_NAME."
-        fi
+    for USER in "${INCLUDE_USERS[@]}"; do
+        sudo usermod -a -G $ADD_USRR_GROUP_NAME $USER
+        echo "Added $USER to $ADD_USRR_GROUP_NAME."
     done
 }
 
@@ -296,13 +292,9 @@ removeUsrsGroup() {
 
     getIncludedUsers
 
-    ALL_USERS=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd)
-
-    for USER in $ALL_USERS; do
-        if [[ " ${INCLUDE_USERS[@]} " == " ${USER} " ]]; then
-            sudo gpasswd -d $USER $REMOVE_USRR_GROUP_NAME
-            echo "Removed $USER from $REMOVE_USRR_GROUP_NAME."
-        fi
+    for USER in "${INCLUDE_USERS[@]}"; do
+        sudo gpasswd -d $USER $REMOVE_USRR_GROUP_NAME
+        echo "Removed $USER from $REMOVE_USRR_GROUP_NAME."
     done
 }
 
@@ -376,6 +368,26 @@ removeAdmin() {
     gpasswd -d $OLD_ADMIN_USER sudo
 }
 
+listAllMediaFilesInHome() {
+    sudo find /home -type d \( -path '*/.config' -o -path '*/.cache' \) -prune -o -type f \( -name '*.mp3' -o -name '*.mp4' -o -name '*.mov' -o -name "*.ogg" -o -name "*.avi" -o -name "*.mpg" -o -name "*.mpeg" -o -name "*.flv" -o -name "*.m4a" -o -name "*.gif" -o -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \) -print
+}
+
+listAllUnownedFiles() {
+    find / -nouser
+}
+
+removeFilesDir() {
+    coloredOutput "Path:" "0"
+    read -e RFDPATH
+
+    coloredOutput "\nAre you sure you want to delete all contents of $RFDPATH? (y/n): " "0"
+    read -e CONFIRM_RFDPATH
+
+    if [[ " ${CONFIRM_RFDPATH} " == " y " ]]; then
+        rm -r $RFDPATH
+    fi
+}
+
 updateApplications() {
     apt-get update -y
     apt-get upgrade -y
@@ -389,21 +401,17 @@ setupFilePermissions() {
     chmod -R 444 /etc/ssh
 }
 
-automatedList() {
-    manageBackups
-    fixSources
-    setupFirewall
-    setupFilePermissions
-    configureSSH
-    configureLoginSettings
-    configureUpdates
-
+manageRequiredSoftware() {
     echo "Is Telnet required? (y/n):"
     read -e TELNETR
     echo "Is SSH required? (y/n):"
     read -e SSHR
     echo "Is FTP required? (y/n):"
     read -e FTPR
+    echo "Is Dovecot(mailing server) required? (y/n):"
+    read -e DCR
+    echo "Is Courier-pop(mailing server) required? (y/n):"
+    read -e CPR
 
     if [[ " ${TELNETR} " == " n " ]]; then
         apt-get purge -y telnet
@@ -418,7 +426,38 @@ automatedList() {
         apt-get remove -y pure-ftpd
     fi
 
+    if [[ " ${DCR} " == " n " ]]; then
+        systemctl stop dovecot
+        apt-get purge -y dovecot-*
+    fi
+
+    if [[ " ${CPR} " == " n " ]]; then
+        systemctl stop courier-pop
+        apt-get purge -y courier-pop
+    fi
+
+    apt-get autoclean -y
+}
+
+automatedList() {
+    exec > >(tee -a /var/log/lshs_auto.log) 2>&1
+
+    manageBackups
+    fixSources
+    setupFirewall
+    setupFilePermissions
+    configureSSH
+    configureLoginSettings
+    
+    exec > /dev/tty 2>&1
+    configureUpdates
+    exec > >(tee -a /var/log/lshs_auto.log) 2>&1
+
+    manageRequiredSoftware
+
     updateApplications
+    
+    exec > /dev/tty 2>&1
 }
 
 runList() {
@@ -444,7 +483,13 @@ runList() {
     coloredOutput "15) Add Users to Group            16) Remove Users from Group\n" "0"
     coloredOutput "17) Display all Users in Group    18) Configure SSH\n" "0"
     coloredOutput "19) Configure Login Settings      20) Update Applications\n" "0"
-    coloredOutput "21) Configure Updates             00) Update Applications\n" "0"
+    coloredOutput "21) Configure Updates             22) Manage required software\n" "0"
+    coloredOutput "23) List all media files in home  24) List all unowned files\n" "0"
+    coloredOutput "25) Remove all files/directory in 26) ---\n" "0"
+    
+    coloredOutput "auto" "33" 
+    coloredOutput ") " "0" 
+    coloredOutput "Auto mode\n" "33"
     
     echo "Choose:"
     read -e USRINPOPTION
@@ -491,7 +536,15 @@ runList() {
         updateApplications
     elif [ "${USRINPOPTION}" == "21" ]; then
         configureUpdates
-    elif [ "${USRINPOPTION}" == "99" ]; then
+    elif [ "${USRINPOPTION}" == "22" ]; then
+        manageRequiredSoftware
+    elif [ "${USRINPOPTION}" == "23" ]; then
+        listAllMediaFilesInHome
+    elif [ "${USRINPOPTION}" == "24" ]; then
+        listAllUnownedFiles
+    elif [ "${USRINPOPTION}" == "25" ]; then
+        removeFilesDir
+    elif [ "${USRINPOPTION}" == "auto" ]; then
         automatedList
     fi
 
