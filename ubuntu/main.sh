@@ -181,6 +181,9 @@ APT::Periodic::AutocleanInterval "7";
 APT::Periodic::Unattended-Upgrade "1";'
 
         sudo dpkg-reconfigure unattended-upgrades
+    else
+        coloredOutput "\n UNKNOWN DISTRO FOR AUTOMATIC UPDATES, PLEASE DO IT MANUALLY AND PRESS ANY KEY TO CONTINUE\n" "31"
+        read
     fi
 }
 
