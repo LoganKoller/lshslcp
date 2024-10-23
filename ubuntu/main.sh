@@ -4,8 +4,7 @@ SCRIPT_PATH=$(readlink -f "$0")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 
 # TODO
-#   List all running services: systemctl list-units --type=service --state=active
-#   List all used ports
+#
 
 # Color Codes:
 #   Reset: 0
@@ -254,7 +253,7 @@ setAllPasswords() {
 
 listUsers() {
     coloredOutput "Users for this system:\n" "0"
-    awk -F: '$3 >= 1000 && $1 != "nobody" { print $1 }' /etc/passwd
+    awk -F: '$3 >= 1000 && $1 != "nobody" { printf "%s ", $1 }' /etc/passwd
 }
 
 addGroup() {
