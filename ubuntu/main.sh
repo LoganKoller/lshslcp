@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root!"
+    exit
+fi
+
 SCRIPT_PATH=$(readlink -f "$0")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 
@@ -130,6 +135,65 @@ fixSources() {
     else
         coloredOutput " [FAIL]\n" "31"
     fi
+}
+
+setupAuditing() {
+    # Install auditd if it's not already installed
+    if ! command -v auditctl &> /dev/null; then
+    echo "Installing auditd..."
+    if [ -f /etc/debian_version ]; then
+        apt update && apt install -y auditd audispd-plugins
+    elif [ -f /etc/redhat-release ]; then
+        yum install -y audit audit-libs auditd audispd-plugins
+    else
+        echo "Unsupported distribution."
+        exit 1
+    fi
+    fi
+
+    # Enable and start the auditd service
+    echo "Enabling and starting auditd..."
+    systemctl enable auditd
+    systemctl start auditd
+
+    # Configure the audit rules for comprehensive auditing
+    echo "Setting audit rules..."
+
+    # Monitor changes to user/group information
+    auditctl -w /etc/passwd -p wa -k passwd_changes
+    auditctl -w /etc/group -p wa -k group_changes
+    auditctl -w /etc/shadow -p wa -k shadow_changes
+    auditctl -w /etc/gshadow -p wa -k gshadow_changes
+
+    # Monitor use of privileged commands (sudo, su, etc.)
+    auditctl -a always,exit -F arch=b64 -S execve -C uid!=euid -k privilege_commands
+    auditctl -a always,exit -F arch=b32 -S execve -C uid!=euid -k privilege_commands
+
+    # Monitor access to sensitive directories
+    auditctl -w /etc/sudoers -p wa -k sudoers_changes
+    auditctl -w /var/log/secure -p wa -k auth_logs
+    auditctl -w /var/log/auth.log -p wa -k auth_logs
+
+    # Monitor login/logout events
+    auditctl -w /var/log/wtmp -p wa -k login_events
+    auditctl -w /var/log/btmp -p wa -k login_failures
+    auditctl -w /var/run/faillock/ -p wa -k login_failures
+
+    # Monitor the use of audit tools
+    auditctl -w /sbin/auditctl -p x -k audit_tools
+    auditctl -w /sbin/auditd -p x -k audit_tools
+
+    # Audit kernel module loading/unloading
+    auditctl -a always,exit -F arch=b64 -S init_module -S delete_module -k kernel_modules
+    auditctl -a always,exit -F arch=b32 -S init_module -S delete_module -k kernel_modules
+
+    # Ensure audit logs are immutable (cannot be tampered with)
+    auditctl -e 2
+
+    echo "Audit rules set. Auditing is now active."
+
+    # Display the current audit rules
+    auditctl -l
 }
 
 setupFirewall() {
@@ -482,6 +546,7 @@ automatedList() {
     fixSources
     setupFirewall
     setupFilePermissions
+    setupAuditing
     configureSSH
     configureLoginSettings
     
@@ -526,6 +591,7 @@ runList() {
     coloredOutput "23) List all media files in home  24) List all unowned files\n" "0"
     coloredOutput "25) Remove all files/directory in 26) Remove Common Hacking apps\n" "0"
     coloredOutput "27) List all running services     28) List all used ports\n" "0"
+    coloredOutput "29) Setup Auditing                30) \n" "0"
     
     coloredOutput "auto" "33" 
     coloredOutput ") " "0" 
@@ -590,6 +656,8 @@ runList() {
         listRunningServices
     elif [ "${USRINPOPTION}" == "28" ]; then
         listUsedPorts
+    elif [ "${USRINPOPTION}" == "29" ]; then
+        setupAuditing
     elif [ "${USRINPOPTION}" == "auto" ]; then
         automatedList
     fi
