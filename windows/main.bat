@@ -177,6 +177,8 @@ goto :menu
                         set "found=1"
 
                         if not "!username!"=="%you%" (
+                            wmic UserAccount where "Name='!username!'" set PasswordExpires=true
+
                             echo Changing password for user %%C...
                             net user "!username!" "!newpassword!"
 
