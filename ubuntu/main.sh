@@ -55,6 +55,79 @@ removeCommonHackingSoftware() {
     apt-get purge -y hydra*
 }
 
+automaticUserManagement() {
+    read -p "Are users configured in the text files? [y/n]: " usersConfigured
+    if [[ "$usersConfigured" != "y" ]]; then
+        exit
+    fi
+
+    # Define the directory of this script
+    scriptDir=$(dirname "$0")
+
+    # Read you.txt into a variable
+    you=$(<"$scriptDir/you.txt")
+
+    # Read authadmins.txt into a list
+    authadmins=()
+    while IFS= read -r line; do
+        authadmins+=("$line")
+    done < "$scriptDir/authorizedAdmins.txt"
+
+    # Read authusers.txt into a list
+    authusers=()
+    while IFS= read -r line; do
+        authusers+=("$line")
+    done < "$scriptDir/authorizedUsers.txt"
+
+    # Print out the variables
+    echo "You: $you"
+    echo "Authorized Admins: ${authadmins[*]}"
+    echo "Authorized Users: ${authusers[*]}"
+
+    # Loop through authadmins and authusers for display
+    echo "Looping through Authorized admins:"
+    for admin in "${authadmins[@]}"; do
+        echo "Admin: $admin"
+    done
+
+    echo "Looping through Authorized users:"
+    for user in "${authusers[@]}"; do
+        echo "User: $user"
+    done
+
+    read -p "Does this look correct? [y/n]: " isCorrect
+    if [[ "$isCorrect" == "y" ]]; then
+        validUsers=("$you" "${authadmins[@]}" "${authusers[@]}" "root" "guest" "default")
+        newpassword="LKSIDE2424$" # If i dont use this password, it says bad password - it is based on dictionary word
+
+        # Iterate through system users
+        while IFS=: read -r username _; do
+            # Skip if username is empty
+            [[ -z "$username" ]] && continue
+
+            # Check if username is in the valid users list
+            if [[ " ${validUsers[*]} " =~ " $username " ]]; then
+                # Change password for users other than the main 'you' user
+                if [[ "$username" != "$you" ]]; then
+                    echo "Changing password for user $username..."
+                    echo "$username:$newpassword" | sudo chpasswd
+
+                    # Manage admin group membership
+                    if [[ " ${authadmins[*]} " =~ " $username " ]]; then
+                        sudo usermod -aG sudo "$username"  # Add to sudo group
+                    else
+                        sudo deluser "$username" sudo  # Remove from sudo group
+                    fi
+                fi
+            else
+                # Delete non-valid user accounts
+                echo "Deleting user account: $username"
+                sudo deluser --remove-home "$username"
+            fi
+        done < <(getent passwd)
+    fi
+}
+
 listRunningServices() {
     systemctl list-units --type=service --state=active
 }
@@ -592,7 +665,7 @@ runList() {
     coloredOutput "23) List all media files in home  24) List all unowned files\n" "0"
     coloredOutput "25) Remove all files/directory in 26) Remove Common Hacking apps\n" "0"
     coloredOutput "27) List all running services     28) List all used ports\n" "0"
-    coloredOutput "29) Setup Auditing                30) \n" "0"
+    coloredOutput "29) Setup Auditing                30) Automatic User Management\n" "0"
     
     coloredOutput "auto" "33" 
     coloredOutput ") " "0" 
@@ -659,6 +732,8 @@ runList() {
         listUsedPorts
     elif [ "${USRINPOPTION}" == "29" ]; then
         setupAuditing
+    elif [ "${USRINPOPTION}" == "30" ]; then
+        automaticUserManagement
     elif [ "${USRINPOPTION}" == "auto" ]; then
         automatedList
     fi
