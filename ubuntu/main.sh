@@ -101,9 +101,9 @@ automaticUserManagement() {
         newpassword="LKSIDE2424$" # If i dont use this password, it says bad password - it is based on dictionary word
 
         # Iterate through system users
-        while IFS=: read -r username _; do
+        while IFS=: read -r username _ uid _; do
             # Skip if username is empty
-            [[ -z "$username" ]] && continue
+            [[ -z "$username" || $uid -lt 1000 ]] && continue
 
             # Check if username is in the valid users list
             if [[ " ${validUsers[*]} " =~ " $username " ]]; then
@@ -211,6 +211,11 @@ fixSources() {
     fi
 }
 
+secureSysctl() {
+    sudo sysctl -w net.ipv4.tcp_syncookies=1
+    sudo sysctl -w net.ipv4.ip_forward=0
+}
+
 setupAuditing() {
     # Install auditd if it's not already installed
     if ! command -v auditctl &> /dev/null; then
@@ -313,6 +318,10 @@ configureLoginSettings() {
     sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/g' /etc/login.defs
     sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t7/g' /etc/login.defs
     sed -i 's/PASS_WARN_AGE\t7/PASS_WARN_AGE\t14/g' /etc/login.defs
+
+    cp "./resources/faillock" "/usr/share/pam-configs/faillock"
+    cp "./resources/faillock_notify" "/usr/share/pam-configs/faillock_notify"
+    pam-auth-update
 
     coloredOutput " [PASS]\n" "32"
 }
@@ -577,6 +586,8 @@ manageRequiredSoftware() {
     read -e DCR
     echo "Is Courier-pop(mailing server) required? (y/n):"
     read -e CPR
+    echo "Is X2GO server required? (y/n):"
+    read -e X2GOSVR
 
     if [[ " ${TELNETR} " == " n " ]]; then
         apt-get purge -y telnet
@@ -588,6 +599,7 @@ manageRequiredSoftware() {
     fi
 
     if [[ " ${FTPR} " == " n " ]]; then
+        apt-get remove -y pure-ftpd
         apt-get remove -y pure-ftpd
     fi
 
@@ -610,7 +622,18 @@ manageRequiredSoftware() {
         service bind9 stop
     fi
 
+    if [[ " ${X2GOSVR} " == " n " ]]; then
+        apt-get purge -y x2goserver 
+        apt-get purge -y x2goserver-xsession
+    elif [[ " ${X2GOSVR} " == " n " ]]; then
+        apt-get install -y x2goserver-xsession
+    fi
+
     apt-get autoclean -y
+}
+
+checkCronJobs() {
+
 }
 
 automatedList() {
@@ -622,6 +645,7 @@ automatedList() {
     setupFilePermissions
     setupAuditing
     configureSSH
+    secureSysctl
     configureLoginSettings
     
     exec > /dev/tty 2>&1
@@ -630,6 +654,7 @@ automatedList() {
 
     removeCommonHackingSoftware
     manageRequiredSoftware
+    automaticUserManagement
 
     updateApplications
     
@@ -666,6 +691,7 @@ runList() {
     coloredOutput "25) Remove all files/directory in 26) Remove Common Hacking apps\n" "0"
     coloredOutput "27) List all running services     28) List all used ports\n" "0"
     coloredOutput "29) Setup Auditing                30) Automatic User Management\n" "0"
+    coloredOutput "31) Check Crontab                30) Automatic User Management\n" "0"
     
     coloredOutput "auto" "33" 
     coloredOutput ") " "0" 

@@ -58,7 +58,7 @@ goto :menu
         if "%answer%"=="11" call :enableFirewall
         if "%answer%"=="12" call :automaticUpdates
         if "%answer%"=="13" call :secureUAC
-        if "%answer%"=="14" call :disableServices
+        if "%answer%"=="14" call :manageServices
         if "%answer%"=="15" call :listUserFiles
         if "%answer%"=="16" call :listShares
         if "%answer%"=="17" call :disableShare
@@ -77,7 +77,7 @@ goto :menu
     call :enableFirewall
     call :installSecureGroupPolicy
     call :toggleRemoteDesktop
-    call :disableServices
+    call :manageServices
     call :automaticUserManagement
 
     exit /b
@@ -92,7 +92,7 @@ goto :menu
 
 :disableShare
     call :listShares
-    set /p targetShare=Target Share: 
+    set /p share_name=Target Share: 
 
     echo Disabling share: %share_name%
     net share %share_name% /delete
@@ -109,6 +109,9 @@ goto :menu
 	if /I "%needsRDP%"=="y" (
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance" /v fAllowToGetHelp /t REG_DWORD /d 1 /f
+
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v SecurityLayer /t REG_DWORD /d 2 /f >nul
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 1 /f
     ) else (
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 1 /f
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance" /v fAllowToGetHelp /t REG_DWORD /d 0 /f
@@ -211,13 +214,46 @@ goto :menu
     exit /b
 
 
-:disableServices
+:manageAdministrativeTemplates
+    REM Enable SmartScreen by setting DWORD value
+    reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableSmartScreen /t REG_DWORD /d 1 /f
+
+    REM Set SmartScreen level to "Warn" by adding a string value
+    reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /v ShellSmartScreenLevel /t REG_SZ /d Warn /f
+
+    echo SmartScreen settings have been configured.
+
+:manageServices
     set /p ftpEnabled=Is FTP Required(y/n): 
     set /p telnetEnabled=Is Telnet Required(y/n): 
     set /p sshEnabled=Is SSH Required(y/n): 
     set /p rdpEnabled=Is Remote Desktop Required(y/n): 
     set /p IISEnabled=Is IIS Required(y/n):
     set /p lanmanEnabled=Is lanman/Simple File Sharing Required(y/n): 
+
+    echo Enabling and Starting Essential Windows Server Services...
+    echo.
+
+    REM List of important security services
+    set SERVICES=EventLog WinDefend MpsSvc SamSs PolicyAgent NlaSvc NTDS VaultSvc TermService wuauserv RpcSs CryptSvc KDC LanmanServer W32Time SENS ALG WinRM
+
+    for %%S in (%SERVICES%) do (
+        echo Processing %%S...
+        sc config %%S start= auto >nul 2>&1
+        sc start %%S >nul 2>&1
+
+        REM Check if the service was successfully started
+        sc query %%S | find "RUNNING" >nul 2>&1
+        if %errorlevel% equ 0 (
+            echo %%S is now running.
+        ) else (
+            echo %%S could not be started. It may already be running or there was an error.
+        )
+        echo.
+    )
+
+    echo All specified services have been processed.
+
 
     :: Stop and disable Windows Update
     sc stop "wuauserv"
