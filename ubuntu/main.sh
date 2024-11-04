@@ -633,7 +633,26 @@ manageRequiredSoftware() {
 }
 
 checkCronJobs() {
-
+    echo "Printing system crontab list:\n\n"
+    cat /etc/crontab
+    echo "All active cron jobs:\n\n"
+    crontab -l
+    echo "\n\n"
+    echo "Hourly cron jobs:\n\n"
+    ls -la /etc/cron.hourly
+    echo "\n\n"
+    echo "Daily cron jobs:\n\n"
+    ls -la /etc/cron.daily
+    echo "\n\n"
+    echo "Weekly cron jobs:\n\n"
+    ls -la /etc/cron.weekly
+    echo "\n\n"
+    echo "Monthly cron jobs:\n\n"
+    ls -la /etc/cron.monthly
+    echo "\n\n"
+    echo "Software-Specific cron jobs:\n\n"
+    ls -l /etc/cron.d
+    echo "\n\n"
 }
 
 automatedList() {
@@ -691,7 +710,7 @@ runList() {
     coloredOutput "25) Remove all files/directory in 26) Remove Common Hacking apps\n" "0"
     coloredOutput "27) List all running services     28) List all used ports\n" "0"
     coloredOutput "29) Setup Auditing                30) Automatic User Management\n" "0"
-    coloredOutput "31) Check Crontab                30) Automatic User Management\n" "0"
+    coloredOutput "31) Check Crontab                 32) Secure Sysctl\n" "0"
     
     coloredOutput "auto" "33" 
     coloredOutput ") " "0" 
@@ -760,6 +779,10 @@ runList() {
         setupAuditing
     elif [ "${USRINPOPTION}" == "30" ]; then
         automaticUserManagement
+    elif [ "${USRINPOPTION}" == "31" ]; then
+        checkCronJobs
+    elif [ "${USRINPOPTION}" == "32" ]; then
+        secureSysctl
     elif [ "${USRINPOPTION}" == "auto" ]; then
         automatedList
     fi
