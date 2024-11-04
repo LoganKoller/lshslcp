@@ -39,7 +39,8 @@ goto :menu
     echo "13) Enable & Secure User Account Control(UAC)         14)  Manage Services"
     echo "15) Print user files                                  16)  List Shares"
     echo "17) Disable share                                     18)  Configure Remote Desktop"
-    echo "19) Automatic User Management                         20)  "
+    echo "19) Automatic User Management                         20)  Apply Administrative Templates"
+    echo "21) Automatic Netcat Removal                          22)  "
     echo.
     echo "auto) Applies Security Fixes Automatically"
     echo "exit) Exits                     reboot) Reboots"
@@ -64,6 +65,7 @@ goto :menu
         if "%answer%"=="17" call :disableShare
         if "%answer%"=="18" call :toggleRemoteDesktop
         if "%answer%"=="19" call :automaticUserManagement
+        if "%answer%"=="20" call :manageAdministrativeTemplates
         if "%answer%"=="auto" call :autoMode
         if "%answer%"=="exit" exit
         if "%answer%"=="reboot" shutdown /r
@@ -77,6 +79,7 @@ goto :menu
     call :enableFirewall
     call :installSecureGroupPolicy
     call :toggleRemoteDesktop
+    call :manageAdministrativeTemplates
     call :manageServices
     call :automaticUserManagement
 
@@ -104,6 +107,10 @@ goto :menu
 
     exit /b
 
+:checkForNetcat
+    call rnc.bat
+    exit /b
+
 :toggleRemoteDesktop
     set /p needsRDP=Is Remote Desktop required?[y/n]: 
 	if /I "%needsRDP%"=="y" (
@@ -112,6 +119,8 @@ goto :menu
 
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v SecurityLayer /t REG_DWORD /d 2 /f >nul
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 1 /f
+
+        netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
     ) else (
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 1 /f
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance" /v fAllowToGetHelp /t REG_DWORD /d 0 /f
@@ -215,6 +224,60 @@ goto :menu
 
 
 :manageAdministrativeTemplates
+    echo Applying Security Administrative Templates...
+    echo.
+
+    REM Disable Autoplay (Both Computer and User Scope)
+    echo Disabling Autoplay...
+    reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoDriveTypeAutoRun /t REG_DWORD /d 255 /f >nul
+    reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoDriveTypeAutoRun /t REG_DWORD /d 255 /f >nul
+
+    REM Enable PowerShell Script Block Logging
+    echo Enabling PowerShell Script Block Logging...
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" /v EnableScriptBlockLogging /t REG_DWORD /d 1 /f >nul
+
+    REM Enable PowerShell Transcription
+    echo Enabling PowerShell Transcription...
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" /v EnableTranscripting /t REG_DWORD /d 1 /f >nul
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" /v OutputDirectory /t REG_SZ /d "%SystemRoot%\Logs\PowerShell" /f >nul
+
+    REM Disable Remote Shell Access
+    echo Disabling Remote Shell Access...
+    reg add "HKLM\Software\Microsoft\Powershell\1\ShellIds\Microsoft.PowerShell" /v DisableRemoteShellAccess /t REG_DWORD /d 1 /f >nul
+
+    REM Disable Remote Desktop Clipboard Redirection
+    echo Disabling Remote Desktop Clipboard Redirection...
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" /v fDisableClipboardRedirection /t REG_DWORD /d 1 /f >nul
+
+    REM Disable LM Hash Storage
+    echo Disabling LM Hash Storage...
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v NoLMHash /t REG_DWORD /d 1 /f >nul
+
+    REM Disable Anonymous SID Enumeration
+    echo Disabling Anonymous SID Enumeration...
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RestrictAnonymousSAM /t REG_DWORD /d 1 /f >nul
+
+    REM Enforce Strong Windows Defender Protection
+    echo Configuring Windows Defender Security Settings...
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 0 /f >nul
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableBehaviorMonitoring /t REG_DWORD /d 0 /f >nul
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableOnAccessProtection /t REG_DWORD /d 0 /f >nul
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScanOnRealtimeEnable /t REG_DWORD /d 0 /f >nul
+
+    REM Disable SMBv1
+    echo Disabling SMBv1 for security...
+    dism /online /norestart /disable-feature /featurename:SMB1Protocol >nul
+
+    REM Disable Credential Caching
+    echo Disabling Credential Caching...
+    reg add "HKLM\Software\Policies\Microsoft\Windows\CredentialsDelegation" /v AllowProtectedCreds /t REG_DWORD /d 0 /f >nul
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v DisableRestrictedAdmin /t REG_DWORD /d 1 /f >nul
+
+    REM Disable Windows Script Host
+    echo Disabling Windows Script Host...
+    reg add "HKLM\Software\Microsoft\Windows Script Host\Settings" /v Enabled /t REG_DWORD /d 0 /f >nul
+
+
     REM Enable SmartScreen by setting DWORD value
     reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableSmartScreen /t REG_DWORD /d 1 /f
 
@@ -222,6 +285,8 @@ goto :menu
     reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /v ShellSmartScreenLevel /t REG_SZ /d Warn /f
 
     echo SmartScreen settings have been configured.
+
+    exit /b
 
 :manageServices
     set /p ftpEnabled=Is FTP Required(y/n): 
@@ -352,6 +417,7 @@ goto :menu
     sc stop "smtpsvc"
     sc config "smtpsvc" start= disabled
 
+    exit /b
 
 :secureUAC
     echo "Enabling & Securing UAC"
