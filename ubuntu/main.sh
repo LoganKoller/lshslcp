@@ -731,7 +731,7 @@ runList() {
     read -e USRINPOPTION
 
     if [ "${USRINPOPTION}" == "1" ]; then
-	manageBackups
+	    manageBackups
     elif [ "${USRINPOPTION}" == "2" ]; then
         fixSources
     elif [ "${USRINPOPTION}" == "3" ]; then
