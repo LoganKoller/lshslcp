@@ -319,6 +319,10 @@ configureLoginSettings() {
     sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t7/g' /etc/login.defs
     sed -i 's/PASS_WARN_AGE\t7/PASS_WARN_AGE\t14/g' /etc/login.defs
 
+    apt-get install dos2unix
+    dos2unix ./resources/faillock
+    dos2unix ./resources/faillock_notify
+
     cp "./resources/faillock" "/usr/share/pam-configs/faillock"
     cp "./resources/faillock_notify" "/usr/share/pam-configs/faillock_notify"
     pam-auth-update
@@ -633,39 +637,46 @@ manageRequiredSoftware() {
 }
 
 checkCronJobs() {
-    echo "Printing system crontab list:\n\n"
+    echo "Printing system crontab list:"
+    printf "\n"
     cat /etc/crontab
-    echo "All active cron jobs:\n\n"
+    echo "All active cron jobs:"
+    printf "\n"
     crontab -l
-    echo "\n\n"
-    echo "Hourly cron jobs:\n\n"
+    printf "\n\n"
+    echo "Hourly cron jobs:"
+    printf "\n"
     ls -la /etc/cron.hourly
-    echo "\n\n"
-    echo "Daily cron jobs:\n\n"
+    printf "\n\n"
+    echo "Daily cron jobs:"
+    printf "\n"
     ls -la /etc/cron.daily
-    echo "\n\n"
-    echo "Weekly cron jobs:\n\n"
+    printf "\n\n"
+    echo "Weekly cron jobs:"
+    printf "\n"
     ls -la /etc/cron.weekly
-    echo "\n\n"
-    echo "Monthly cron jobs:\n\n"
+    printf "\n\n"
+    echo "Monthly cron jobs:"
+    printf "\n"
     ls -la /etc/cron.monthly
-    echo "\n\n"
-    echo "Software-Specific cron jobs:\n\n"
+    printf "\n\n"
+    echo "Software-Specific cron jobs:"
+    printf "\n"
     ls -l /etc/cron.d
-    echo "\n\n"
+    printf "\n\n"
 }
 
 automatedList() {
     exec > >(tee -a /var/log/lshs_auto.log) 2>&1
 
     manageBackups
-    fixSources
+    configureLoginSettings
+    #fixSources
     setupFirewall
     setupFilePermissions
     setupAuditing
     configureSSH
     secureSysctl
-    configureLoginSettings
     
     exec > /dev/tty 2>&1
     configureUpdates
