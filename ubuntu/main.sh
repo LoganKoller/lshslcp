@@ -351,6 +351,9 @@ APT::Periodic::AutocleanInterval "7";
 APT::Periodic::Unattended-Upgrade "1";'
 
         sudo dpkg-reconfigure unattended-upgrades
+
+        # Causes some problems - locks apt
+        sudo systemctl stop unattended-upgrades
     else
         coloredOutput "\n UNKNOWN DISTRO FOR AUTOMATIC UPDATES, PLEASE DO IT MANUALLY AND PRESS ANY KEY TO CONTINUE\n" "31"
         read
@@ -574,6 +577,13 @@ setupFilePermissions() {
     chmod -R 444 /etc/ssh
 }
 
+reinstallOpenSSH() {
+    sudo apt-get --purge remove openssh-client openssh-server
+    sudo apt-get -y install openssh-client openssh-server
+
+    configureSSH
+}
+
 manageRequiredSoftware() {
     echo "Is Telnet required? (y/n):"
     read -e TELNETR
@@ -728,6 +738,7 @@ runList() {
     coloredOutput "27) List all running services     28) List all used ports\n" "0"
     coloredOutput "29) Setup Auditing                30) Automatic User Management\n" "0"
     coloredOutput "31) Check Crontab                 32) Secure Sysctl\n" "0"
+    coloredOutput "31) Reinstall OpenSSH                   \n" "0"
     
     coloredOutput "auto" "33" 
     coloredOutput ") " "0" 
@@ -800,6 +811,8 @@ runList() {
         checkCronJobs
     elif [ "${USRINPOPTION}" == "32" ]; then
         secureSysctl
+    elif [ "${USRINPOPTION}" == "33" ]; then
+        reinstallOpenSSH
     elif [ "${USRINPOPTION}" == "auto" ]; then
         automatedList
     fi
