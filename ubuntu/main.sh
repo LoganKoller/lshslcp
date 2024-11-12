@@ -591,6 +591,8 @@ manageRequiredSoftware() {
     read -e CPR
     echo "Is X2GO server required? (y/n):"
     read -e X2GOSVR
+    echo "Is XRDP/RDP required? (y/n):"
+    read -e XRDPR
 
     if [[ " ${TELNETR} " == " n " ]]; then
         apt-get purge -y telnet
@@ -630,6 +632,10 @@ manageRequiredSoftware() {
         apt-get purge -y x2goserver-xsession
     elif [[ " ${X2GOSVR} " == " n " ]]; then
         apt-get install -y x2goserver-xsession
+    fi
+
+    if [[ " ${XRDPR} " == " n " ]]; then
+        apt-get purge -y xrdp
     fi
 
     apt-get autoclean -y
