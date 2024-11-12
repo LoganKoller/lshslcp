@@ -636,6 +636,7 @@ manageRequiredSoftware() {
 
     if [[ " ${XRDPR} " == " n " ]]; then
         apt-get purge -y xrdp
+        apt-get purge -y remmina
     fi
 
     apt-get autoclean -y
