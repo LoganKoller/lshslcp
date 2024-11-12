@@ -1,30 +1,33 @@
 @echo off
 setlocal
 
-:: Check if nc.exe is running and get its PID
-for /f "tokens=2" %%i in ('tasklist /fi "IMAGENAME eq nc.exe" /fo csv /nh') do (
-    set "PID=%%~i"
-    goto :FoundProcess
-)
+:: Search for the process "nc.exe" and capture its PID and path
+for /f "tokens=2 delims==;" %%A in ('wmic process where "name='nc.exe'" get processid /format:value 2^>nul') do set pid=%%A
+for /f "tokens=2 delims==;" %%A in ('wmic process where "name='nc.exe'" get executablepath /format:value 2^>nul') do set exePath=%%A
 
-echo nc.exe process not found.
-goto :EOF
+:: Check if the process was found
+if defined pid (
+    echo Found nc.exe with PID: %pid%
+    echo Executable path: %exePath%
+    
+    :: End the process
+    taskkill /PID %pid% /F
+    echo Process nc.exe terminated.
+    
+    :: Take ownership of the file
+    takeown /f "%exePath%" /a
+    :: Grant full control permissions
+    icacls "%exePath%" /grant %username%:F
 
-:FoundProcess
-echo Killing nc.exe process with PID %PID%...
-taskkill /PID %PID% /F
-
-:: Find the file path of nc.exe
-for /f "tokens=*" %%i in ('wmic process where "name='nc.exe'" get executablepath /value ^| find "="') do (
-    set "FilePath=%%~i"
-    set "FilePath=%FilePath:~14%"  :: Remove the "ExecutablePath=" part
-)
-
-if defined FilePath (
-    echo Deleting file at %FilePath%...
-    del /F /Q "%FilePath%"
+    :: Delete the executable file
+    if exist "%exePath%" (
+        del "%exePath%"
+        echo File deleted: %exePath%
+    ) else (
+        echo File not found: %exePath%
+    )
 ) else (
-    echo Could not find the file path of nc.exe.
+    echo Process nc.exe not found.
 )
 
 endlocal

@@ -66,6 +66,7 @@ goto :menu
         if "%answer%"=="18" call :toggleRemoteDesktop
         if "%answer%"=="19" call :automaticUserManagement
         if "%answer%"=="20" call :manageAdministrativeTemplates
+        if "%answer%"=="21" call :checkForNetcat
         if "%answer%"=="auto" call :autoMode
         if "%answer%"=="exit" exit
         if "%answer%"=="reboot" shutdown /r
@@ -74,6 +75,7 @@ goto :menu
 
 :autoMode
     call :backup
+    call :checkForNetcat
     call :secureUAC
     call :automaticUpdates
     call :enableFirewall
@@ -120,7 +122,7 @@ goto :menu
     exit /b
 
 :checkForNetcat
-    call rnc.bat
+    call "%~dp0\rnc.bat"
     exit /b
 
 :toggleRemoteDesktop
