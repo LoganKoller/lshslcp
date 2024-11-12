@@ -319,11 +319,11 @@ configureLoginSettings() {
     sed -i 's/PASS_WARN_AGE\t7/PASS_WARN_AGE\t14/g' /etc/login.defs
 
     apt-get install dos2unix
-    dos2unix ./resources/faillock
-    dos2unix ./resources/faillock_notify
+    dos2unix "$SCRIPT_DIR/resources/faillock"
+    dos2unix "$SCRIPT_DIR/faillock_notify"
 
-    cp "./resources/faillock" "/usr/share/pam-configs/faillock"
-    cp "./resources/faillock_notify" "/usr/share/pam-configs/faillock_notify"
+    cp "$SCRIPT_DIR/resources/faillock" "/usr/share/pam-configs/faillock"
+    cp "$SCRIPT_DIR/resources/faillock_notify" "/usr/share/pam-configs/faillock_notify"
     pam-auth-update
 
     coloredOutput " [PASS]\n" "32"
